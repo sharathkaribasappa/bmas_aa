@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">BMAS</string>
+
+    <string name="bmas">Biometric Attendance System</string>
+
+    <string name="title_activity_registration">Registration</string>
+    <string name="name">Employee name</string>
+    <string name="empid">Employee ID</string>
+    <string name="department">Department</string>
+    <string name="building">Building</string>
+    <string name="company_name">Company</string>
+    <string name="country">Country</string>
+    <string name="phone_number">Phone number</string>
+    <string name="register">Register</string>
+
+    <string name="landing">Attendance System</string>
+    <string name="date">Date</string>
+    <string name="time">Time</string>
+    <string name="attendance">Send Attendance</string>
+</resources>
