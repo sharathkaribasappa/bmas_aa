@@ -99,7 +99,7 @@
                 android:layout_marginTop="5dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textPersonName"
+                android:inputType="phone"
                 android:hint="enter building number"
                 android:ems="10"
                 android:id="@+id/emp_buld_edt" />
@@ -108,7 +108,7 @@
                 android:layout_marginTop="5dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textPersonName"
+                android:inputType="phone"
                 android:hint="enter phone number"
                 android:ems="10"
                 android:id="@+id/emp_phnnum_edt" />
