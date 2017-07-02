@@ -19,8 +19,6 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
 import java.io.UnsupportedEncodingException;
-import java.util.HashMap;
-import java.util.Map;
 
 public class RegistrationActivity extends AppCompatActivity {
 
@@ -73,6 +71,7 @@ public class RegistrationActivity extends AppCompatActivity {
     }
 
     private void sendUserDataToServer() {
+        //API 1 - user registration
         String url = "http://ec2-35-154-248-134.ap-south-1.compute.amazonaws.com/losec/reg_user.php";
 
         // Formulate the request and handle the response.
