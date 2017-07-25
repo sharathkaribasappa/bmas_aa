@@ -1,9 +1,8 @@
-package com.am;
+package com.am.geofence;
 
 import android.app.IntentService;
 import android.content.Intent;
 import android.os.Handler;
-import android.support.v4.content.LocalBroadcastManager;
 import android.widget.Toast;
 
 import com.google.android.gms.location.Geofence;
@@ -17,11 +16,11 @@ public class GeoFenceIntentService extends IntentService {
 
     // Defines a custom Intent action
     public static final String BROADCAST_ACTION =
-            "com.example.android.threadsample.BROADCAST";
+            "com.am.broadcast_geofenceupdate";
 
     // Defines the key for the status "extra" in an Intent
     public static final String EXTENDED_DATA_STATUS =
-            "com.example.android.threadsample.STATUS";
+            "com.am.broadcast_geofencestatus";
 
     private Handler mHandler;
 
@@ -59,7 +58,8 @@ public class GeoFenceIntentService extends IntentService {
             // Puts the status into the Intent
             localIntent.putExtra(EXTENDED_DATA_STATUS, "location_true");
             // Broadcasts the Intent to receivers in this app.
-            LocalBroadcastManager.getInstance(GeoFenceIntentService.this).sendBroadcast(localIntent);
+            sendBroadcast(localIntent);
+            //LocalBroadcastManager.getInstance(GeoFenceIntentService.this).sendBroadcast(localIntent);
         }
     }
 }

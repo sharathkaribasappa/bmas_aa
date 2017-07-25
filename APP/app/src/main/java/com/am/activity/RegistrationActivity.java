@@ -1,4 +1,4 @@
-package com.am;
+package com.am.activity;
 
 import android.content.Context;
 import android.content.Intent;
@@ -10,17 +10,12 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
+import com.am.R;
+import com.am.network.ServiceBroker;
+import com.am.network.VolleyResponse;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
 
-import java.io.UnsupportedEncodingException;
-
-public class RegistrationActivity extends AppCompatActivity {
+public class RegistrationActivity extends AppCompatActivity implements VolleyResponse{
 
     final static String TAG = "UserRegistration";
 
@@ -31,14 +26,10 @@ public class RegistrationActivity extends AppCompatActivity {
     private String phoneNumber;
     private String imei;
 
-    private RequestQueue mRequestQueue;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registration);
-
-        mRequestQueue = Volley.newRequestQueue(this);
 
         Button button = (Button) findViewById(R.id.register_button);
         button.setOnClickListener(new View.OnClickListener() {
@@ -74,39 +65,7 @@ public class RegistrationActivity extends AppCompatActivity {
         //API 1 - user registration
         String url = "http://ec2-35-154-248-134.ap-south-1.compute.amazonaws.com/losec/reg_user.php";
 
-        // Formulate the request and handle the response.
-        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
-            new Response.Listener<String>() {
-                @Override
-                public void onResponse(String response) {
-                    Log.d(TAG,"success response for registration request, response:" + response);
-                    Intent intent = new Intent(RegistrationActivity.this, LandingActivity.class);
-                    startActivity(intent);
-
-                    finish();
-                }
-            },
-            new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-                    Log.e(TAG,"error response for registration request, error:" + error);
-                }
-            }) {
-            @Override
-            public byte[] getBody() throws AuthFailureError {
-                Log.e(TAG, "Registration data:" + getParsedData());
-                byte[] body = new byte[0];
-                try {
-                    body = getParsedData().getBytes("UTF-8");
-                } catch (UnsupportedEncodingException e) {
-                    Log.e("UserProfileEditFragment", "Unable to gets bytes from JSON", e.fillInStackTrace());
-                }
-                return body;
-            }
-        };
-
-        // Add the request to the RequestQueue.
-        mRequestQueue.add(stringRequest);
+        ServiceBroker.getInstance().makeNetworkRequest(getApplicationContext(), url, this, getParsedData());
     }
 
     private String getParsedData() {
@@ -126,5 +85,24 @@ public class RegistrationActivity extends AppCompatActivity {
         sb.append("}");
 
         return sb.toString();
+    }
+
+    @Override
+    public void noNetworkConnection() {
+
+    }
+
+    @Override
+    public void onSuccessResponse(String response) {
+        Log.d(TAG,"success response for registration request, response:" + response);
+        Intent intent = new Intent(RegistrationActivity.this, LandingActivity.class);
+        startActivity(intent);
+
+        finish();
+    }
+
+    @Override
+    public void onErrorResponse(VolleyError error) {
+        Log.e(TAG,"error response for registration request, error:" + error);
     }
 }

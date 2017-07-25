@@ -1,4 +1,4 @@
-package com.am;
+package com.am.activity;
 
 import android.Manifest;
 import android.content.Context;
@@ -12,40 +12,27 @@ import android.os.Bundle;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
+import com.am.LogReader;
+import com.am.R;
+import com.am.network.ServiceBroker;
+import com.am.network.VolleyResponse;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.UnsupportedEncodingException;
-import java.util.Calendar;
-
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements VolleyResponse{
 
     private static String TAG = "MainActivity";
 
     private final static int MY_PERMISSIONS_READ_PHONE_STATE = 1;
     private final static int MY_PERMISSIONS_WRITE_STORAGE_PHONE_STATE = 2;
 
-    private RequestQueue mRequestQueue;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        if(checkForWriteStoragePermissions()) {
+        /*if(checkForWriteStoragePermissions()) {
             startLogger();
-        }
-
-        mRequestQueue = Volley.newRequestQueue(this);
+        }*/
 
         if(checkForPhoneStatePermissions()) {
             getUserDataFromServer();
@@ -109,44 +96,7 @@ public class MainActivity extends AppCompatActivity {
         //API 3 , get registered user data
         String url = "http://ec2-35-154-248-134.ap-south-1.compute.amazonaws.com/losec/emp_dtls.php";
 
-        // Formulate the request and handle the response.
-        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
-            new Response.Listener<String>() {
-                @Override
-                public void onResponse(String response) {
-                    Log.d(TAG,"success response for userdata request, response:" + response);
-                    if(response != null && response.contains("null")) {
-                        Intent intent = new Intent(MainActivity.this, RegistrationActivity.class);
-                        startActivity(intent);
-                    } else {
-                        Intent intent = new Intent(MainActivity.this, LandingActivity.class);
-                        intent.putExtra("userData",response);
-                        startActivity(intent);
-                    }
-                    finish();
-                }
-            },
-            new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-                    Log.e(TAG,"error response for userdata request, error:" + error);
-                }
-            }) {
-            @Override
-            public byte[] getBody() throws AuthFailureError {
-                Log.e(TAG, "user imei:" + getImei());
-                byte[] body = new byte[0];
-                try {
-                    body = getImei().getBytes("UTF-8");
-                } catch (UnsupportedEncodingException e) {
-                    Log.e("UserProfileEditFragment", "Unable to get bytes from JSON", e.fillInStackTrace());
-                }
-                return body;
-            }
-        };
-
-        // Add the request to the RequestQueue.
-        mRequestQueue.add(stringRequest);
+        ServiceBroker.getInstance().makeNetworkRequest(getApplicationContext(), url, this, getImei());
     }
 
     private String getImei() {
@@ -170,5 +120,29 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         thread.start();
+    }
+
+    @Override
+    public void noNetworkConnection() {
+
+    }
+
+    @Override
+    public void onSuccessResponse(String response) {
+        Log.d(TAG,"success response for userdata request, response:" + response);
+        if(response != null && response.contains("null")) {
+            Intent intent = new Intent(MainActivity.this, RegistrationActivity.class);
+            startActivity(intent);
+        } else {
+            Intent intent = new Intent(MainActivity.this, LoginLogoutActivity.class);
+            intent.putExtra("userData",response);
+            startActivity(intent);
+        }
+        finish();
+    }
+
+    @Override
+    public void onErrorResponse(VolleyError error) {
+        Log.e(TAG,"error response for userdata request, error:" + error);
     }
 }

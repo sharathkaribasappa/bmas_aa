@@ -1,4 +1,4 @@
-package com.am;
+package com.am.geofence;
 
 /**
  * Created by skaribasappa on 6/25/17.

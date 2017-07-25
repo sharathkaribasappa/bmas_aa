@@ -1,4 +1,4 @@
-package com.am;
+package com.am.fingerprint;
 
 import android.app.DialogFragment;
 import android.content.Context;
@@ -17,6 +17,9 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.am.activity.LandingActivity;
+import com.am.R;
 
 /**
  * A dialog which uses fingerprint APIs to authenticate the user, and falls back to password
@@ -165,7 +168,7 @@ public class FingerprintAuthenticationDialogFragment extends DialogFragment
 
             if (mUseFingerprintFutureCheckBox.isChecked()) {
                 // Re-create the key so that fingerprints including new ones are validated.
-                mActivity.createKey(LandingActivity.DEFAULT_KEY_NAME, true);
+                mActivity.createFingerPrintKey(FingerPrintConfig.DEFAULT_KEY_NAME, true);
                 mStage = Stage.FINGERPRINT;
             }
         }

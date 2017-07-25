@@ -1,4 +1,4 @@
-package com.am;
+package com.am.geofence;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;

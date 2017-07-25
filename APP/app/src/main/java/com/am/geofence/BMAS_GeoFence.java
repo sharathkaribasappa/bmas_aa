@@ -1,4 +1,4 @@
-package com.am;
+package com.am.geofence;
 
 import android.app.PendingIntent;
 import android.content.Context;
@@ -10,6 +10,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
+import com.am.activity.LandingActivity;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Result;
@@ -86,7 +87,7 @@ public class BMAS_GeoFence implements GoogleApiClient.ConnectionCallbacks, Googl
 
         for(int i = 0; i < geoFenceDataMap.size(); i++) {
             geoFenceList.add(new Geofence.Builder()
-                    .setRequestId("GeoFenceLocation")
+                    .setRequestId("ID_" + i)
                     .setCircularRegion(geoFenceDataMap.get(i).getLatitude(), geoFenceDataMap.get(i).getLongitude(), MINIMUM_RECOMENDED_RADIUS)
                     .setExpirationDuration(Geofence.NEVER_EXPIRE)
                     .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER |

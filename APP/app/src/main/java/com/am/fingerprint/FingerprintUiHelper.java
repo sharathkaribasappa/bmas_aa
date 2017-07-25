@@ -1,9 +1,11 @@
-package com.am;
+package com.am.fingerprint;
 
 import android.hardware.fingerprint.FingerprintManager;
 import android.os.CancellationSignal;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.am.R;
 
 /**
  * Small helper class to manage text/icon around fingerprint authentication UI.

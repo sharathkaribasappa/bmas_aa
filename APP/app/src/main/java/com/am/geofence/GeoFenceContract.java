@@ -1,4 +1,4 @@
-package com.am;
+package com.am.geofence;
 
 import android.provider.BaseColumns;
 
