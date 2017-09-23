@@ -1,17 +1,21 @@
 package com.am.activity;
 
+import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.Handler;
+import android.os.Vibrator;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -22,8 +26,10 @@ import com.am.geofence.BMAS_GeoFence;
 import com.am.geofence.GeoFenceContract;
 import com.am.geofence.GeoFenceDataModel;
 import com.am.geofence.GeoFenceDbHelper;
+import com.am.geofence.GeoFenceIntentService;
 import com.am.network.ServiceBroker;
 import com.am.network.VolleyResponse;
+import com.am.service.TimerService;
 import com.android.volley.VolleyError;
 
 import org.json.JSONArray;
@@ -47,13 +53,16 @@ public class LandingActivity extends AppCompatActivity{
     private TextView Date;
     private TextView Time;
 
+    private static StringBuilder mUserAttendanceData = new StringBuilder();
+
     private GeoFenceDbHelper mGeoFenceDbHelper;
     public static HashMap<Integer,GeoFenceDataModel> GeoFenceDataDbMap = new HashMap();
-    private HashMap<Integer,String> mBuildingNumberMap = new HashMap();
+    private static HashMap<Integer,String> mBuildingNumberMap = new HashMap();
 
     private BMAS_GeoFence mGeoFence;
     private FingerPrintConfig mFingerPrintConfig;
 
+    private GeoFenceIntentServiceListener mGeoFenceIntentServiceListener;
     // Define a projection that specifies which columns from the database
     // you will actually use after this query.
     String[] mProjection = {
@@ -63,12 +72,15 @@ public class LandingActivity extends AppCompatActivity{
             GeoFenceContract.GeoFenceEntry.COLUMN_NAME_LONGITUDE
     };
 
+    private static boolean isLoggedIn = false;
+
+    private Context mContext;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_landing);
 
-        requestLocationPermission();
+        mContext = this;
 
         employeeId = (TextView) findViewById(R.id.emp_id_tv);
         employeeName = (TextView) findViewById(R.id.emp_name_tv);
@@ -80,39 +92,66 @@ public class LandingActivity extends AppCompatActivity{
         Time = (TextView) findViewById(R.id.time_tv);
 
         String response = getIntent().getStringExtra("userData");
-        if(response != null) {
-            parseUserData(response);
-        } else {
-            getUserDataFromServer();
+        isLoggedIn = getIntent().getBooleanExtra("isLogin",false);
+
+        mFingerPrintConfig = new FingerPrintConfig(this);
+        int setupResult = mFingerPrintConfig.setupFingerPrint();
+
+        //fingerprint/lock screen is not setup, so we cannot proceed hence finishing the activity
+        if(setupResult == 0) {
+            finish();
+            return;
         }
 
         mGeoFence = new BMAS_GeoFence(this);
+        mGeoFenceIntentServiceListener = new GeoFenceIntentServiceListener();
 
-        mGeoFenceDbHelper = new GeoFenceDbHelper(this);
-        getBuildingNumberFromDb();
+        if(response != null) {
+            parseUserData(response);
 
-        mFingerPrintConfig = new FingerPrintConfig(this);
-        mFingerPrintConfig.setupFingerPrint();
+            mGeoFenceDbHelper = new GeoFenceDbHelper(this);
+            getBuildingCoordinatesFromDb();
+        } else {
+            getUserDataFromServer();
+        }
     }
 
     @Override
     protected void onStart() {
         super.onStart();
 
-        //connect to google api client
-        mGeoFence.onConnect();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(GeoFenceIntentService.BROADCAST_ACTION);
+        //LocalBroadcastManager.getInstance(this).registerReceiver(mGeoFenceIntentServiceListener,intentFilter);
+        registerReceiver(mGeoFenceIntentServiceListener,intentFilter);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        //sendTestBroadCast();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
 
-        mGeoFence.onDisconnect();
+        if(mGeoFence != null) {
+            mGeoFence.onDisconnect();
+        }
+
+        if(mGeoFenceIntentServiceListener != null) {
+            //LocalBroadcastManager.getInstance(this).unregisterReceiver(mGeoFenceIntentServiceListener);
+            unregisterReceiver(mGeoFenceIntentServiceListener);
+        }
     }
 
     @Override
     protected void onDestroy() {
-        mGeoFenceDbHelper.close();
+        if(mGeoFenceDbHelper != null) {
+            mGeoFenceDbHelper.close();
+        }
         super.onDestroy();
     }
 
@@ -122,7 +161,7 @@ public class LandingActivity extends AppCompatActivity{
         if (requestCode == REQUEST_LOCATION) {
             if(grantResults.length == 1
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                mGeoFence.onPermissionGranted();
+                mGeoFence.onConnect();
             }
         }
     }
@@ -150,6 +189,9 @@ public class LandingActivity extends AppCompatActivity{
             @Override
             public void onSuccessResponse(String response) {
                 parseUserData(response);
+
+                mGeoFenceDbHelper = new GeoFenceDbHelper(mContext);
+                getBuildingCoordinatesFromDb();
             }
 
             @Override
@@ -160,8 +202,12 @@ public class LandingActivity extends AppCompatActivity{
     }
 
     private String getImei() {
+        String imei = null;
         TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        final String imei = telephonyManager.getDeviceId();
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_PHONE_STATE)
+                == PackageManager.PERMISSION_GRANTED) {
+            imei = telephonyManager.getDeviceId();
+        }
 
         StringBuilder sb = new StringBuilder();
         sb.append("{");
@@ -257,9 +303,10 @@ public class LandingActivity extends AppCompatActivity{
                 geoFence.setLatitude(jsonObject.getString("lat"));
                 geoFence.setLongitude(jsonObject.getString("lon"));
 
-                GeoFenceDataDbMap.put(i,geoFence);
+                GeoFenceDataDbMap.put(Integer.parseInt(geoFence.getBuildingNumber()),geoFence);
             }
 
+            connectToGoogleClient();
             updateGeoFenceToDatabase(GeoFenceDataDbMap);
         } catch (JSONException e) {
             e.printStackTrace();
@@ -275,7 +322,7 @@ public class LandingActivity extends AppCompatActivity{
 
 
         for(int i = 0; i < geoFenceDataMap.size(); i++) {
-            GeoFenceDataModel geoFenceData = geoFenceDataMap.get(i);
+            GeoFenceDataModel geoFenceData = geoFenceDataMap.get(Integer.parseInt(mBuildingNumberMap.get(i)));
             values.put(GeoFenceContract.GeoFenceEntry.COLUMN_NAME_BUILDING_NUMBER,geoFenceData.getBuildingNumber());
             values.put(GeoFenceContract.GeoFenceEntry.COLUMN_NAME_LATITUDE,geoFenceData.getLatitude());
             values.put(GeoFenceContract.GeoFenceEntry.COLUMN_NAME_LONGITUDE,geoFenceData.getLongitude());
@@ -287,7 +334,7 @@ public class LandingActivity extends AppCompatActivity{
         }
     }
 
-    private void getBuildingNumberFromDb() {
+    private void getBuildingCoordinatesFromDb() {
         SQLiteDatabase db = mGeoFenceDbHelper.getReadableDatabase();
 
         Cursor cursor = db.query(
@@ -296,8 +343,6 @@ public class LandingActivity extends AppCompatActivity{
         );
 
         GeoFenceDataDbMap.clear();
-        boolean isBuildingNumberPresentInDb = false;
-        int i = 0;
 
         while(cursor.moveToNext()) {
             GeoFenceDataModel geoFenceData = new GeoFenceDataModel();
@@ -306,16 +351,27 @@ public class LandingActivity extends AppCompatActivity{
             geoFenceData.setLatitude(cursor.getString(cursor.getColumnIndexOrThrow(GeoFenceContract.GeoFenceEntry.COLUMN_NAME_LATITUDE)));
             geoFenceData.setLongitude(cursor.getString(cursor.getColumnIndexOrThrow(GeoFenceContract.GeoFenceEntry.COLUMN_NAME_LONGITUDE)));
 
-            GeoFenceDataDbMap.put(i,geoFenceData);
-            i++;
+            GeoFenceDataDbMap.put(Integer.parseInt(geoFenceData.getBuildingNumber()),geoFenceData);
 
-            isBuildingNumberPresentInDb = mBuildingNumberMap.containsValue(geoFenceData.getBuildingNumber());
-            Log.d(TAG, "getBuildingNumberFromDb, buildingNumber: " + geoFenceData.getBuildingNumber());
+            Log.d(TAG, "getBuildingCoordinatesFromDb, buildingNumber: " + geoFenceData.getBuildingNumber());
         }
 
-        if(!isBuildingNumberPresentInDb) {
-            Log.d(TAG, "getBuildingNumberFromDb, buildingNumber not found, fetching from server");
+        if(GeoFenceDataDbMap.size() < mBuildingNumberMap.size()) {
+            Log.d(TAG, "getBuildingCoordinatesFromDb, buildingNumber not found, fetching from server");
             fetchGeoFenceData();
+        } else {
+            connectToGoogleClient();
+        }
+    }
+
+    private void connectToGoogleClient() {
+        // Check Permissions Now
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            //connect to google api client
+            mGeoFence.onConnect();
+        }else {
+            requestLocationPermission();
         }
     }
 
@@ -346,7 +402,17 @@ public class LandingActivity extends AppCompatActivity{
         sb.append("\"" + building.getText() + "\"");
 
         sb.append("}");
+        setUserAttendanceData(sb);
+
         return sb.toString();
+    }
+
+    public static StringBuilder getUserAttendanceData() {
+        return mUserAttendanceData;
+    }
+
+    public static void setUserAttendanceData(StringBuilder userAttendanceData) {
+        mUserAttendanceData = userAttendanceData;
     }
 
     private void sendUserAttendance(final String userData) {
@@ -357,21 +423,46 @@ public class LandingActivity extends AppCompatActivity{
             @Override
             public void noNetworkConnection() {
                 Log.e(TAG, "noNetworkConnection, attendance data not sent");
+
+                //start the timer service to count the elapsed time and send the attendance when internet is available
+                Intent intent = new Intent(mContext, TimerService.class);
+                intent.putExtra("isLogin", isLoggedIn);
+                startService(intent);
+
+                Toast.makeText(mContext, "Attendance data not sent successfully, as there is no internet available in phone. Attendance will be sent once internet is available",
+                        Toast.LENGTH_LONG).show();
+                finish();
             }
 
             @Override
             public void onSuccessResponse(String response) {
                 Log.d(TAG, "sendUserAttendence successful");
+
+                SharedPreferences sharedPref = getSharedPreferences(
+                        getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                SharedPreferences.Editor editor = sharedPref.edit();
+                editor.putBoolean(getString(R.string.preference_file_key), isLoggedIn);
+                editor.commit();
+
+                Vibrator v = (Vibrator) mContext.getSystemService(Context.VIBRATOR_SERVICE);
+                // Vibrate for 1000 milliseconds
+                v.vibrate(500);
+
+                Toast.makeText(mContext, "Attendance data sent successfully",
+                        Toast.LENGTH_LONG).show();
+                finish();
             }
 
             @Override
             public void onErrorResponse(VolleyError error) {
-                Log.e(TAG, "sendUserAttendence error:" + error);
+                Log.e(TAG, "sendUserAttendence error:" + error + "trying again to send the data");
+
+                sendUserAttendance(formAttendanceDatatoString());
             }
         }, userData);
     }
 
-    @Override
+    /*@Override
     public boolean dispatchKeyEvent(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.KEYCODE_ENTER) {
             Toast.makeText(this,
@@ -402,5 +493,43 @@ public class LandingActivity extends AppCompatActivity{
         for(int i = 0; i < bldnumber.length; i++) {
             mBuildingNumberMap.put(i,bldnumber[i]);
         }
+    } */
+
+    public class GeoFenceIntentServiceListener extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Vibrator v = (Vibrator) mContext.getSystemService(Context.VIBRATOR_SERVICE);
+            // Vibrate for 1000 milliseconds
+            v.vibrate(1000);
+
+            //show fingerprint dialog for authentication
+            mFingerPrintConfig.showFingerPrintDialog();
+
+            Toast.makeText(context, "GeoFenceIntentServiceListener ",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    public static Integer[] getBuildingNumber() {
+        Integer[] buildingNumber = new Integer[mBuildingNumberMap.size() + 1];
+
+        for(int i = 0; i < mBuildingNumberMap.size(); i++) {
+            //Log.d(TAG,"mBuildingNumberMap["+i+"] :" + Integer.parseInt(mBuildingNumberMap.get(i)));
+            buildingNumber[i] = Integer.parseInt(mBuildingNumberMap.get(i));
+        }
+
+        return buildingNumber;
+    }
+
+    private void sendTestBroadCast() {
+        /*
+             * Creates a new Intent containing a Uri object
+             * BROADCAST_ACTION is a custom Intent action
+             */
+        Intent localIntent = new Intent(GeoFenceIntentService.BROADCAST_ACTION);
+        // Puts the status into the Intent
+        localIntent.putExtra(GeoFenceIntentService.EXTENDED_DATA_STATUS, "location_true");
+        // Broadcasts the Intent to receiver in this app.
+        sendBroadcast(localIntent);
     }
 }

@@ -35,4 +35,5 @@
     <string name="sign_in">Sign in</string>
     <string name="login_button">Log In</string>
     <string name="logout_button">Log Out</string>
+    <string name="preference_file_key">logindata</string>
 </resources>

@@ -95,7 +95,7 @@ public class RegistrationActivity extends AppCompatActivity implements VolleyRes
     @Override
     public void onSuccessResponse(String response) {
         Log.d(TAG,"success response for registration request, response:" + response);
-        Intent intent = new Intent(RegistrationActivity.this, LandingActivity.class);
+        Intent intent = new Intent(RegistrationActivity.this, LoginLogoutActivity.class);
         startActivity(intent);
 
         finish();

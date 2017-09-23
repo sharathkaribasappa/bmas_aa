@@ -48,17 +48,6 @@ public class BMAS_GeoFence implements GoogleApiClient.ConnectionCallbacks, Googl
         mGoogleApiClient.disconnect();
     }
 
-    public void onPermissionGranted() {
-        if (ActivityCompat.checkSelfPermission(mContext, android.Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
-            LocationServices.GeofencingApi.addGeofences(
-                    mGoogleApiClient,
-                    createGeoFencingRequest(),
-                    getGeoFencePendingIntent()
-            ).setResultCallback(mResultCallback);
-        }
-    }
-
     private synchronized void setupGoogleApiClient() {
         mGoogleApiClient = new GoogleApiClient.Builder(mContext)
                 .addConnectionCallbacks(this)
@@ -85,10 +74,11 @@ public class BMAS_GeoFence implements GoogleApiClient.ConnectionCallbacks, Googl
     private List createGeoFenceList(HashMap<Integer,GeoFenceDataModel> geoFenceDataMap) {
         List<Geofence> geoFenceList = new ArrayList<>();
 
+        Integer[] buildingNumber = LandingActivity.getBuildingNumber();
         for(int i = 0; i < geoFenceDataMap.size(); i++) {
             geoFenceList.add(new Geofence.Builder()
                     .setRequestId("ID_" + i)
-                    .setCircularRegion(geoFenceDataMap.get(i).getLatitude(), geoFenceDataMap.get(i).getLongitude(), MINIMUM_RECOMENDED_RADIUS)
+                    .setCircularRegion(geoFenceDataMap.get(buildingNumber[i]).getLatitude(), geoFenceDataMap.get(buildingNumber[i]).getLongitude(), MINIMUM_RECOMENDED_RADIUS)
                     .setExpirationDuration(Geofence.NEVER_EXPIRE)
                     .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER |
                             Geofence.GEOFENCE_TRANSITION_EXIT)

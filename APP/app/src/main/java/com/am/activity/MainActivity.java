@@ -11,6 +11,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.am.LogReader;
 import com.am.R;
@@ -100,8 +101,12 @@ public class MainActivity extends AppCompatActivity implements VolleyResponse{
     }
 
     private String getImei() {
+        String imei = null;
         TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        final String imei = telephonyManager.getDeviceId();
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_PHONE_STATE)
+                == PackageManager.PERMISSION_GRANTED) {
+            imei = telephonyManager.getDeviceId();
+        }
 
         StringBuilder sb = new StringBuilder();
         sb.append("{");
@@ -124,7 +129,12 @@ public class MainActivity extends AppCompatActivity implements VolleyResponse{
 
     @Override
     public void noNetworkConnection() {
+        Log.e(TAG,"MainActivity, noNetworkConnection");
 
+        Toast.makeText(this, "No network connection, please connect to wifi or data network and try again ",
+                Toast.LENGTH_LONG).show();
+
+        finish();
     }
 
     @Override

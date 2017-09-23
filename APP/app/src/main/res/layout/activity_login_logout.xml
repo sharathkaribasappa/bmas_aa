@@ -15,7 +15,7 @@
         android:layout_marginLeft="135dp"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginTop="146dp" />
+        android:layout_marginTop="33dp" />
 
     <Button
         android:id="@+id/logout"

@@ -49,7 +49,7 @@ public class FingerPrintConfig {
         mActivity = activity;
     }
 
-    public void setupFingerPrint() {
+    public int setupFingerPrint() {
         try {
             mKeyStore = KeyStore.getInstance("AndroidKeyStore");
         } catch (KeyStoreException e) {
@@ -84,7 +84,7 @@ public class FingerPrintConfig {
                     "Secure lock screen hasn't set up.\n"
                             + "Go to 'Settings -> Security -> Fingerprint' to set up a fingerprint",
                     Toast.LENGTH_LONG).show();
-            return;
+            return 0;
         }
 
         // Now the protection level of USE_FINGERPRINT permission is normal instead of dangerous.
@@ -96,13 +96,15 @@ public class FingerPrintConfig {
             Toast.makeText(mActivity,
                     "Go to 'Settings -> Security -> Fingerprint' and register at least one fingerprint",
                     Toast.LENGTH_LONG).show();
-            return;
+            return 0;
         }
         createKey(DEFAULT_KEY_NAME, true);
         createKey(KEY_NAME_NOT_INVALIDATED, false);
 
         mCipher = defaultCipher;
         mKeyName = DEFAULT_KEY_NAME;
+
+        return 1;
     }
 
     /**

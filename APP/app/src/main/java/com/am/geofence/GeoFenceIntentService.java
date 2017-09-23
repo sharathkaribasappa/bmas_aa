@@ -3,6 +3,7 @@ package com.am.geofence;
 import android.app.IntentService;
 import android.content.Intent;
 import android.os.Handler;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.location.Geofence;
@@ -13,6 +14,8 @@ import com.google.android.gms.location.GeofencingEvent;
  */
 
 public class GeoFenceIntentService extends IntentService {
+
+    private static String TAG = "GeoFenceIntentService";
 
     // Defines a custom Intent action
     public static final String BROADCAST_ACTION =
@@ -39,6 +42,13 @@ public class GeoFenceIntentService extends IntentService {
             return;
         }
 
+        //geofencingEvent receieved, check if the location is mocked
+        boolean isMock = geofencingEvent.getTriggeringLocation().isFromMockProvider();
+        Log.e(TAG,"ismocked:" + isMock);
+        if(isMock) {
+            return;
+        }
+
         int geoFenceTransition =
                 geofencingEvent.getGeofenceTransition();
         if (geoFenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER ||
@@ -57,9 +67,8 @@ public class GeoFenceIntentService extends IntentService {
             Intent localIntent = new Intent(BROADCAST_ACTION);
             // Puts the status into the Intent
             localIntent.putExtra(EXTENDED_DATA_STATUS, "location_true");
-            // Broadcasts the Intent to receivers in this app.
+            // Broadcasts the Intent to receiver in this app.
             sendBroadcast(localIntent);
-            //LocalBroadcastManager.getInstance(GeoFenceIntentService.this).sendBroadcast(localIntent);
         }
     }
 }
